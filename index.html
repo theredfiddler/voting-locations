@@ -302,6 +302,7 @@ function cardHtml(r){
   const name = r.location_name || r.location || r.site_name || 'Voting Location';
   const address = [r.address, r.city, r.zip].filter(Boolean).join(', ');
   const hours = r.hours || r.polling_hours;
+  const phone = r.phone
   const county = r.county;
   const statusRaw = (r.status || '').toLowerCase();
   const badge = statusRaw
@@ -316,6 +317,7 @@ function cardHtml(r){
       <div class="meta-row">
         ${county ? `<span><b>County:</b> ${escapeHtml(county)}</span>` : ''}
         ${hours ? `<span><b>Hours:</b> ${escapeHtml(hours)}</span>` : ''}
+        ${phone ? `<span><b>Registrar Phone Number:</b> ${escapeHtml(phone)}</span>` : ''}
         ${badge}
       </div>
       ${notes ? `<div class="addr" style="margin-top:8px;">${escapeHtml(notes)}</div>` : ''}
