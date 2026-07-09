@@ -9,11 +9,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --ink:       #1B2A4A;   /* deep civic navy */
+    --ink:       #1B2A4A;
     --ink-soft:  #3A4258;
-    --paper:     #F7F5EF;   /* warm ballot-paper */
+    --paper:     #F7F5EF;
     --paper-2:   #EFEBE1;
-    --gold:      #B8922F;   /* seal / ballot-box brass */
+    --gold:      #B8922F;
     --line:      #D8D2C2;
     --open:      #2F6B4F;
     --closed:    #A13A2E;
@@ -32,7 +32,6 @@
 
   .wrap{ max-width:760px; margin:0 auto; padding:0 24px 80px; }
 
-  /* ---------- Header / hero ---------- */
   header{
     padding:56px 24px 40px;
     text-align:center;
@@ -63,7 +62,6 @@
     line-height:1.5;
   }
 
-  /* ---------- Ballot-stub divider (signature element) ---------- */
   .stub{
     height:1px;
     margin:36px auto 0;
@@ -72,7 +70,6 @@
     opacity:.55;
   }
 
-  /* ---------- Search ---------- */
   .search-block{ padding:40px 0 8px; }
   form{
     display:flex;
@@ -82,10 +79,15 @@
     border-radius:10px;
     padding:6px 6px 6px 18px;
     box-shadow:var(--shadow);
+    position:relative;
   }
   form:focus-within{ outline:3px solid rgba(184,146,47,.35); outline-offset:2px; }
+
+  .input-wrap{ position:relative; flex:1; display:flex; }
+
   input[type="text"]{
     flex:1;
+    width:100%;
     border:none;
     outline:none;
     font-family:'Inter', sans-serif;
@@ -108,6 +110,41 @@
   }
   button:hover{ background:#132039; }
   button:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
+  button:disabled{ background:#AEB4C2; cursor:not-allowed; }
+
+  /* ---------- Suggestions dropdown ---------- */
+  .suggestions{
+    position:absolute;
+    top:calc(100% + 8px);
+    left:0;
+    right:0;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:8px;
+    box-shadow:var(--shadow);
+    max-height:260px;
+    overflow-y:auto;
+    z-index:30;
+  }
+  .suggestions[hidden]{ display:none; }
+  .suggestion-item{
+    padding:11px 16px;
+    font-size:15px;
+    cursor:pointer;
+    color:var(--ink);
+    border-bottom:1px solid #F0EDE3;
+  }
+  .suggestion-item:last-child{ border-bottom:none; }
+  .suggestion-item:hover,
+  .suggestion-item.active{
+    background:rgba(184,146,47,.12);
+  }
+  .suggestion-empty{
+    padding:11px 16px;
+    font-size:14px;
+    color:var(--ink-soft);
+    font-style:italic;
+  }
 
   .hint{
     font-size:13px;
@@ -116,7 +153,6 @@
     padding-left:4px;
   }
 
-  /* ---------- Status line ---------- */
   #status{
     font-family:'IBM Plex Mono', monospace;
     font-size:13px;
@@ -125,7 +161,6 @@
     min-height:18px;
   }
 
-  /* ---------- Results ---------- */
   #results{ margin-top:20px; display:flex; flex-direction:column; gap:14px; }
 
   .card{
@@ -198,49 +233,66 @@
 <header>
   <div class="eyebrow">Voter Information · Virginia</div>
   <h1>Where do I vote?</h1>
-  <p class="sub">Enter your county below to see polling locations, addresses, and hours.</p>
+  <p class="sub">Start typing your county below and select it from the list to see polling locations, addresses, and hours.</p>
 </header>
 <div class="stub"></div>
 
 <div class="wrap">
   <div class="search-block">
     <form id="search-form" role="search" aria-label="Search voting locations by county">
-      <input
-        type="text"
-        id="county-input"
-        placeholder="Enter a county, e.g. Fairfax"
-        autocomplete="off"
-        aria-label="County name"
-      >
-      <button type="submit">Search</button>
+      <div class="input-wrap">
+        <input
+          type="text"
+          id="county-input"
+          placeholder="Start typing a county…"
+          autocomplete="off"
+          role="combobox"
+          aria-expanded="false"
+          aria-autocomplete="list"
+          aria-controls="county-suggestions"
+          aria-label="County name"
+        >
+        <div id="county-suggestions" class="suggestions" role="listbox" hidden></div>
+      </div>
+      <button type="submit" id="search-btn" disabled>Search</button>
     </form>
+    <p class="hint">Select a county from the dropdown to see its voting locations.</p>
     <div id="status">Loading voting location data…</div>
   </div>
 
   <div id="results"></div>
 </div>
 
-<script>
-/* =========================================================
-   CONFIG — replace with your published Google Sheet CSV URL.
-   File > Share > Publish to web > select tab > CSV
-   ========================================================= */
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQdYY982wQLn7oo76pPGXKB43Uun_TTJxJSrLGGkx2ZzHrfYKjGzRxEA5yA_WHyuEnxzaaU8mdcDHfi/pub?gid=0&single=true&output=csv";
+<footer>Sourced from official county records. If a location looks out of date, contact your local registrar.</footer>
 
-/* Expected columns (case-insensitive, flexible order):
-   County, Location Name, Address, City, Zip, Hours, Status, Notes
-   Only "County" and "Location Name" are required — others are optional. */
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQdYY982wQLn7oo76pPGXKB43Uun_TTJxJSrLGGkx2ZzHrfYKjGzRxEA5yA_WHyuEnxzaaU8mdcDHfi/pub?gid=0&single=true&output=csv";
 
 const statusEl = document.getElementById('status');
 const resultsEl = document.getElementById('results');
 const form = document.getElementById('search-form');
 const input = document.getElementById('county-input');
+const suggestionsEl = document.getElementById('county-suggestions');
+const searchBtn = document.getElementById('search-btn');
 
 let rows = [];
 let loaded = false;
+let counties = [];        // unique, sorted list of real county names
+let filtered = [];        // currently visible suggestions
+let activeIndex = -1;     // keyboard-highlighted suggestion
+let selectedCounty = '';  // the county actually chosen from the list
 
 function normalizeKey(k){
-  return k.trim().toLowerCase().replace(/\s+/g, '_');
+  return k.trim().toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function buildCountyList(){
+  counties = Array.from(
+    new Set(rows.map(r => (r.county || '').trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function loadData(){
@@ -261,7 +313,8 @@ function loadData(){
     complete: (res) => {
       rows = res.data;
       loaded = true;
-      statusEl.textContent = `Loaded ${rows.length} voting locations. Search a county above.`;
+      buildCountyList();
+      statusEl.textContent = `Loaded ${rows.length} voting locations across ${counties.length} counties. Start typing a county above.`;
     },
     error: (err) => {
       statusEl.textContent = "";
@@ -270,28 +323,119 @@ function loadData(){
   });
 }
 
-function renderResults(query){
+/* ---------- Suggestions dropdown behavior ---------- */
+
+function openSuggestions(){
+  suggestionsEl.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+}
+function closeSuggestions(){
+  suggestionsEl.hidden = true;
+  input.setAttribute('aria-expanded', 'false');
+  activeIndex = -1;
+}
+
+function renderSuggestions(query){
   const q = query.trim().toLowerCase();
+
   if (!q) {
-    resultsEl.innerHTML = '';
-    statusEl.textContent = `Loaded ${rows.length} voting locations. Search a county above.`;
+    filtered = [];
+    closeSuggestions();
     return;
   }
+
+  // Prioritize counties that start with the query, then any that contain it
+  const startsWith = counties.filter(c => c.toLowerCase().startsWith(q));
+  const contains = counties.filter(c => !c.toLowerCase().startsWith(q) && c.toLowerCase().includes(q));
+  filtered = [...startsWith, ...contains].slice(0, 8);
+
+  activeIndex = -1;
+
+  if (filtered.length === 0) {
+    suggestionsEl.innerHTML = `<div class="suggestion-empty">No matching county</div>`;
+    openSuggestions();
+    return;
+  }
+
+  suggestionsEl.innerHTML = filtered.map((c, i) =>
+    `<div class="suggestion-item" role="option" data-index="${i}">${escapeHtml(c)}</div>`
+  ).join('');
+  openSuggestions();
+}
+
+function highlightActive(){
+  [...suggestionsEl.querySelectorAll('.suggestion-item')].forEach((el, i) => {
+    el.classList.toggle('active', i === activeIndex);
+  });
+}
+
+function chooseCounty(name){
+  selectedCounty = name;
+  input.value = name;
+  closeSuggestions();
+  searchBtn.disabled = false;
+  renderResults(name);
+}
+
+input.addEventListener('input', () => {
+  // Any manual edit invalidates a previous exact selection
+  if (input.value !== selectedCounty) {
+    selectedCounty = '';
+    searchBtn.disabled = true;
+  }
+  renderSuggestions(input.value);
+});
+
+input.addEventListener('keydown', (e) => {
+  if (suggestionsEl.hidden || filtered.length === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeIndex = (activeIndex + 1) % filtered.length;
+    highlightActive();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
+    highlightActive();
+  } else if (e.key === 'Enter') {
+    if (activeIndex >= 0) {
+      e.preventDefault();
+      chooseCounty(filtered[activeIndex]);
+    }
+  } else if (e.key === 'Escape') {
+    closeSuggestions();
+  }
+});
+
+suggestionsEl.addEventListener('mousedown', (e) => {
+  // mousedown (not click) so it fires before the input's blur event
+  const item = e.target.closest('.suggestion-item');
+  if (!item) return;
+  const idx = Number(item.dataset.index);
+  chooseCounty(filtered[idx]);
+});
+
+document.addEventListener('click', (e) => {
+  if (!form.contains(e.target)) closeSuggestions();
+});
+
+/* ---------- Results ---------- */
+
+function renderResults(countyName){
   if (!loaded) {
     resultsEl.innerHTML = `<div class="empty">Still loading data — try again in a moment.</div>`;
     return;
   }
 
-  const matches = rows.filter(r => (r.county || '').toLowerCase().includes(q));
+  const matches = rows.filter(r => (r.county || '').trim().toLowerCase() === countyName.trim().toLowerCase());
 
   if (matches.length === 0) {
     statusEl.textContent = '';
-    resultsEl.innerHTML = `<div class="empty">No voting locations found for "${escapeHtml(query)}". Check the spelling, or try just the county name without "County".</div>`;
+    resultsEl.innerHTML = `<div class="empty">No voting locations found for "${escapeHtml(countyName)}".</div>`;
     return;
   }
 
-  statusEl.textContent = `${matches.length} location${matches.length === 1 ? '' : 's'} found for "${escapeHtml(query)}"`;
-
+  statusEl.textContent = `${matches.length} location${matches.length === 1 ? '' : 's'} in ${escapeHtml(countyName)}`;
   resultsEl.innerHTML = matches.map(cardHtml).join('');
 }
 
@@ -299,9 +443,9 @@ function cardHtml(r){
   const name = r.location_name || r.location || r.site_name || 'Voting Location';
   const address = [r.address, r.city, r.zip].filter(Boolean).join(', ');
   const hours = r.hours || r.polling_hours;
-  const monday_thru_friday = r.monday_thru_friday
-  const saturday_and_sunday = r.saturday_and_sunday
-  const phone = r.phone
+  const monday_thru_friday = r.monday_thru_friday;
+  const saturday_and_sunday = r.saturday_and_sunday;
+  const phone = r.phone;
   const county = r.county;
   const statusRaw = (r.status || '').toLowerCase();
   const badge = statusRaw
@@ -334,7 +478,7 @@ function escapeHtml(str){
 
 form.addEventListener('submit', (e) => {
   e.preventDefault();
-  renderResults(input.value);
+  if (selectedCounty) renderResults(selectedCounty);
 });
 
 loadData();
