@@ -9,15 +9,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
   :root{
-    --ink:       #1B2A4A;
+    --ink:       hsl(219, 50%, 15%);
     --ink-soft:  #3A4258;
     --paper:     #F7F5EF;
-    --paper-2:   #EFEBE1;
-    --gold:      #874881;
-    --line:      #000000;
+    --paper-2:   #453f2e;
+    --dark-purple:      lab(44.56% 23.23 -14);
+    --light-purple:      hsl(306, 17%, 55%);
     --open:      #2F6B4F;
     --closed:    #A13A2E;
-    --shadow: 0 1px 2px rgba(27,42,74,0.06), 0 8px 24px rgba(27,42,74,0.06);
+    --shadow: 0 1px 2px rgba(73, 35, 80, 0.06), 0 8px 24px rgba(27,42,74,0.06);
   }
 
   *{ box-sizing:border-box; }
@@ -26,14 +26,14 @@
     margin:0;
     background:var(--paper);
     color:var(--ink);
-    font-family:'Inter', sans-serif;
+    font-family: sans-serif;
     min-height:100vh;
   }
 
   .wrap{ max-width:760px; margin:0 auto; padding:0 24px 80px; }
 
   header{
-    padding:56px 24px 40px;
+    padding: 56px 24px 4px;
     text-align:center;
     position:relative;
   }
@@ -74,14 +74,14 @@
   form{
     display:flex;
     gap:10px;
-    background:#fff;
-    border:1.5px solid var(--ink);
+    background:hsl(0, 0%, 100%);
+    border:2px solid var(--ink);
     border-radius:10px;
-    padding:6px 6px 6px 18px;
+    padding:6px 18px;
     box-shadow:var(--shadow);
     position:relative;
   }
-  form:focus-within{ outline:3px solid rgba(184,146,47,.35); outline-offset:2px; }
+  form:focus-within{ outline:3px solid var(--light-purple); outline-offset:2px; }
 
   .input-wrap{ position:relative; flex:1; display:flex; }
 
@@ -94,23 +94,9 @@
     font-size:17px;
     background:transparent;
     color:var(--ink);
+    padding:8px 0;
   }
-  input[type="text"]::placeholder{ color:#9198A8; }
-  button{
-    font-family:'Inter', sans-serif;
-    font-weight:600;
-    font-size:15px;
-    color:#fff;
-    background:var(--ink);
-    border:none;
-    border-radius:6px;
-    padding:0 22px;
-    cursor:pointer;
-    transition:background .15s ease;
-  }
-  button:hover{ background:#132039; }
-  button:focus-visible{ outline:3px solid var(--gold); outline-offset:2px; }
-  button:disabled{ background:#AEB4C2; cursor:not-allowed; }
+  input[type="text"]::placeholder{ color:var(--dark-purple); }
 
   /* ---------- Suggestions dropdown ---------- */
   .suggestions{
@@ -119,7 +105,7 @@
     left:0;
     right:0;
     background:#fff;
-    border:1px solid var(--line);
+    border:1px solid var(--light-purple);
     border-radius:8px;
     box-shadow:var(--shadow);
     max-height:260px;
@@ -154,7 +140,7 @@
   }
 
   #status{
-    font-family:'IBM Plex Mono', monospace;
+    font-family: sans-serif;
     font-size:13px;
     color:var(--ink-soft);
     margin:28px 0 0;
@@ -165,8 +151,7 @@
 
   .card{
     background:#fff;
-    border:1px solid var(--line);
-    border-left:4px solid var(--gold);
+    border:1px solid var(--dark-purple);
     border-radius:8px;
     padding:20px 22px;
     box-shadow:var(--shadow);
@@ -190,7 +175,7 @@
     font-size:13px;
     color:var(--ink-soft);
   }
-  .meta-row span b{ color:var(--ink); font-weight:600; }
+  .meta-row span b{ color:var(--dark-purple); font-weight:600; }
   .badge{
     display:inline-block;
     font-family:'IBM Plex Mono', monospace;
@@ -207,7 +192,7 @@
     margin-top:32px;
     padding:26px;
     text-align:center;
-    border:1px dashed var(--line);
+    border:1px dashed var(--light-purple);
     border-radius:8px;
     color:var(--ink-soft);
     font-size:14.5px;
@@ -223,19 +208,16 @@
 
   @media (max-width:480px){
     header{ padding:40px 20px 28px; }
-    form{ flex-direction:column; align-items:stretch; padding:14px; }
-    button{ padding:12px; }
+    form{ padding:10px 14px; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="eyebrow">Voter Information · Virginia</div>
-  <h1>Where do I vote?</h1>
-  <p class="sub">Start typing your county below and select it from the list to see polling locations, addresses, and hours.</p>
+  <h1>Where do I vote early in Virginia?</h1>
 </header>
-<div class="stub"></div>
+<!-- <div class="stub"></div> -->
 
 <div class="wrap">
   <div class="search-block">
@@ -244,7 +226,7 @@
         <input
           type="text"
           id="county-input"
-          placeholder="Start typing a county…"
+          placeholder="Start typing your county or city..."
           autocomplete="off"
           role="combobox"
           aria-expanded="false"
@@ -254,9 +236,7 @@
         >
         <div id="county-suggestions" class="suggestions" role="listbox" hidden></div>
       </div>
-      <button type="submit" id="search-btn" disabled>Search</button>
     </form>
-    <p class="hint">Select a county from the dropdown to see its voting locations.</p>
     <div id="status">Loading voting location data…</div>
   </div>
 
@@ -273,7 +253,6 @@ const resultsEl = document.getElementById('results');
 const form = document.getElementById('search-form');
 const input = document.getElementById('county-input');
 const suggestionsEl = document.getElementById('county-suggestions');
-const searchBtn = document.getElementById('search-btn');
 
 let rows = [];
 let loaded = false;
@@ -373,7 +352,6 @@ function chooseCounty(name){
   selectedCounty = name;
   input.value = name;
   closeSuggestions();
-  searchBtn.disabled = false;
   renderResults(name);
 }
 
@@ -381,7 +359,6 @@ input.addEventListener('input', () => {
   // Any manual edit invalidates a previous exact selection
   if (input.value !== selectedCounty) {
     selectedCounty = '';
-    searchBtn.disabled = true;
   }
   renderSuggestions(input.value);
 });
@@ -398,9 +375,11 @@ input.addEventListener('keydown', (e) => {
     activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
     highlightActive();
   } else if (e.key === 'Enter') {
+    e.preventDefault();
     if (activeIndex >= 0) {
-      e.preventDefault();
       chooseCounty(filtered[activeIndex]);
+    } else if (filtered.length > 0) {
+      chooseCounty(filtered[0]);
     }
   } else if (e.key === 'Escape') {
     closeSuggestions();
@@ -417,6 +396,11 @@ suggestionsEl.addEventListener('mousedown', (e) => {
 
 document.addEventListener('click', (e) => {
   if (!form.contains(e.target)) closeSuggestions();
+});
+
+// Prevent any stray Enter/native submit from reloading the page
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
 });
 
 /* ---------- Results ---------- */
@@ -475,11 +459,6 @@ function escapeHtml(str){
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[m]));
 }
-
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  if (selectedCounty) renderResults(selectedCounty);
-});
 
 loadData();
 </script>
