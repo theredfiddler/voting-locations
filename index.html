@@ -446,7 +446,7 @@ function cardHtml(r){
         ${hours ? `<span><b>Hours:</b> ${escapeHtml(hours)}</span>` : ''}
         ${monday_thru_friday ? `<span><b>Monday Thru Friday:</b> ${escapeHtml(monday_thru_friday)}</span>` : ''}
         ${saturday_and_sunday ? `<span><b>Saturday and Sunday:</b> ${escapeHtml(saturday_and_sunday)}</span>` : ''}
-        ${phone ? `<span><b>Registrar Phone Number:</b> ${escapeHtml(phone)}</span>` : ''}
+        ${phone ? `<span><b>Registrar Phone Number:</b> <a href="tel:${phone.replace(/[^0-9+]/g, '')}" class="phone-link">${escapeHtml(phone)}</a></span>` : ''}
         ${badge}
       </div>
       ${notes ? `<div class="addr" style="margin-top:8px;">${escapeHtml(notes)}</div>` : ''}
